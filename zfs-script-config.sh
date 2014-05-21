@@ -5,8 +5,8 @@ KERNELBUILD=/usr/src/kernels/2.6.32-279.14.1.el6.x86_64
 KERNELSRCVER=2.6.32-279.14.1.el6.x86_64
 KERNELMOD=/lib/modules/${KERNELSRCVER}/kernel
 
-SPLSRC=/root/ZFS_source/spl
-SPLBUILD=/root/ZFS_source/spl
+SPLSRC=/usr/src/spl-0.6.2
+SPLBUILD=/usr/src/spl-0.6.2/2.6.32-279.14.1.el6.x86_64
 SPLSRCVER=0.6.2-38_gad3412e
 
 SRCDIR=/root/ZFS_source/zfs

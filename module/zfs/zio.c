@@ -24,6 +24,9 @@
  * Copyright (c) 2011 Nexenta Systems, Inc. All rights reserved.
  */
 
+
+//#define MODULE
+
 #include <sys/zfs_context.h>
 #include <sys/fm/fs/zfs.h>
 #include <sys/spa.h>
@@ -36,7 +39,10 @@
 #include <sys/dmu_objset.h>
 #include <sys/arc.h>
 #include <sys/ddt.h>
-
+//#include <linux/init.h>
+//#include <linux/module.h>
+//#include <linux/kernel.h>
+#include <sys/fs/zfs.h>
 /*
  * ==========================================================================
  * I/O type descriptions
@@ -99,7 +105,9 @@ zio_cons(void *arg, void *unused, int kmflag)
 	zio_t *zio = arg;
 
 	bzero(zio, sizeof (zio_t));
-
+	#if defined(_KERNEL)	
+	printk("##**##:zio_cons 0\r\n");
+	#endif
 	mutex_init(&zio->io_lock, NULL, MUTEX_DEFAULT, NULL);
 	cv_init(&zio->io_cv, NULL, CV_DEFAULT, NULL);
 
@@ -107,6 +115,9 @@ zio_cons(void *arg, void *unused, int kmflag)
 			offsetof(zio_link_t, zl_parent_node));
 	list_create(&zio->io_child_list, sizeof (zio_link_t),
 			offsetof(zio_link_t, zl_child_node));
+	#if defined(_KERNEL)	
+	printk("##**##:zio_cons 1\r\n");
+	#endif
 
 	return (0);
 }
@@ -114,12 +125,19 @@ zio_cons(void *arg, void *unused, int kmflag)
 	static void
 zio_dest(void *arg, void *unused)
 {
+	
 	zio_t *zio = arg;
+	#if defined(_KERNEL)	
+	printk("##**##:zio_dest 0\r\n");
+	#endif
 
 	mutex_destroy(&zio->io_lock);
 	cv_destroy(&zio->io_cv);
 	list_destroy(&zio->io_parent_list);
 	list_destroy(&zio->io_child_list);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_dest 1\r\n");
+	#endif
 }
 
 	void
@@ -128,7 +146,12 @@ zio_init(void)
 	size_t c;
 
 	vmem_t *data_alloc_arena = NULL;
-	sprintf("Harsha:Initializing zio_init");
+	//sprintf("Harsha:Initializing zio_init");
+	//	dprintf("Harsha:Initializing ZIO\r\n");
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_init 0\r\n");
+	#endif
 	zio_cache = kmem_cache_create("zio_cache", sizeof (zio_t), 0,
 			zio_cons, zio_dest, NULL, NULL, NULL, KMC_KMEM);
 	zio_link_cache = kmem_cache_create("zio_link_cache",
@@ -214,11 +237,18 @@ zio_init(void)
 	zio_inject_init();
 
 	lz4_init();
+	#if defined(_KERNEL)	
+	printk("##**##:zio_init 1\r\n");
+	#endif
 }
 
 	void
 zio_fini(void)
 {
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_fini 0\r\n");
+	#endif
 	size_t c;
 	kmem_cache_t *last_cache = NULL;
 	kmem_cache_t *last_data_cache = NULL;
@@ -244,6 +274,9 @@ zio_fini(void)
 	zio_inject_fini();
 
 	lz4_fini();
+	#if defined(_KERNEL)	
+	printk("##**##:zio_fini 1\r\n");
+	#endif
 }
 
 /*
@@ -261,9 +294,17 @@ zio_fini(void)
 	void *
 zio_buf_alloc(size_t size)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_buf_alloc 0\r\n");
+	#endif
+
 	size_t c = (size - 1) >> SPA_MINBLOCKSHIFT;
 
 	ASSERT(c < SPA_MAXBLOCKSIZE >> SPA_MINBLOCKSHIFT);
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_buf_alloc 1\r\n");
+	#endif
 
 	return (kmem_cache_alloc(zio_buf_cache[c], KM_PUSHPAGE | KM_NODEBUG));
 }
@@ -277,9 +318,17 @@ zio_buf_alloc(size_t size)
 	void *
 zio_data_buf_alloc(size_t size)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_data_buf_alloc 0\r\n");
+	#endif
+
 	size_t c = (size - 1) >> SPA_MINBLOCKSHIFT;
 
 	ASSERT(c < SPA_MAXBLOCKSIZE >> SPA_MINBLOCKSHIFT);
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_data_buf_alloc 1\r\n");
+	#endif
 
 	return (kmem_cache_alloc(zio_data_buf_cache[c],
 				KM_PUSHPAGE | KM_NODEBUG));
@@ -288,21 +337,37 @@ zio_data_buf_alloc(size_t size)
 	void
 zio_buf_free(void *buf, size_t size)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_buf_free 0\r\n");
+	#endif
+
 	size_t c = (size - 1) >> SPA_MINBLOCKSHIFT;
 
 	ASSERT(c < SPA_MAXBLOCKSIZE >> SPA_MINBLOCKSHIFT);
 
 	kmem_cache_free(zio_buf_cache[c], buf);
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_buf_free 1\r\n");
+	#endif
 }
 
 	void
 zio_data_buf_free(void *buf, size_t size)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_data_buf_free 0\r\n");
+	#endif
+
 	size_t c = (size - 1) >> SPA_MINBLOCKSHIFT;
 
 	ASSERT(c < SPA_MAXBLOCKSIZE >> SPA_MINBLOCKSHIFT);
 
 	kmem_cache_free(zio_data_buf_cache[c], buf);
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_data_buf_free 1\r\n");
+	#endif
 }
 
 /*
@@ -313,13 +378,30 @@ zio_data_buf_free(void *buf, size_t size)
 	void *
 zio_vdev_alloc(void)
 {
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_alloc 0\r\n");
+	#endif
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_alloc 1\r\n");
+	#endif
+
 	return (kmem_cache_alloc(zio_vdev_cache, KM_PUSHPAGE));
 }
 
 	void
 zio_vdev_free(void *buf)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_free 0\r\n");
+	#endif
+
 	kmem_cache_free(zio_vdev_cache, buf);
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_free 1\r\n");
+	#endif
 
 }
 
@@ -332,6 +414,10 @@ zio_vdev_free(void *buf)
 zio_push_transform(zio_t *zio, void *data, uint64_t size, uint64_t bufsize,
 		zio_transform_func_t *transform)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_push_transforms 0\r\n");
+	#endif
+
 	zio_transform_t *zt = kmem_alloc(sizeof (zio_transform_t), KM_PUSHPAGE);
 
 	zt->zt_orig_data = zio->io_data;
@@ -344,12 +430,21 @@ zio_push_transform(zio_t *zio, void *data, uint64_t size, uint64_t bufsize,
 
 	zio->io_data = data;
 	zio->io_size = size;
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_push_transforms 1\r\n");
+	#endif
+
 }
 
 	static void
 zio_pop_transforms(zio_t *zio)
 {
 	zio_transform_t *zt;
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_pop_transforms 0\r\n");
+	#endif
 
 	while ((zt = zio->io_transform_stack) != NULL) {
 		if (zt->zt_transform != NULL)
@@ -365,6 +460,9 @@ zio_pop_transforms(zio_t *zio)
 
 		kmem_free(zt, sizeof (zio_transform_t));
 	}
+	#if defined(_KERNEL)	
+	printk("##**##:zio_pop_transforms 1\r\n");
+	#endif
 }
 
 /*
@@ -375,19 +473,32 @@ zio_pop_transforms(zio_t *zio)
 	static void
 zio_subblock(zio_t *zio, void *data, uint64_t size)
 {
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_subblock 0\r\n");
+	#endif
 	ASSERT(zio->io_size > size);
 
 	if (zio->io_type == ZIO_TYPE_READ)
 		bcopy(zio->io_data, data, size);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_subblock 1\r\n");
+	#endif
 }
 
 	static void
 zio_decompress(zio_t *zio, void *data, uint64_t size)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_decompress 0\r\n");
+	#endif
 	if (zio->io_error == 0 &&
 			zio_decompress_data(BP_GET_COMPRESS(zio->io_bp),
 				zio->io_data, data, zio->io_size, size) != 0)
 		zio->io_error = SET_ERROR(EIO);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_decompress 1\r\n");
+	#endif
 }
 
 /*
@@ -406,6 +517,11 @@ zio_decompress(zio_t *zio, void *data, uint64_t size)
 	zio_t *
 zio_walk_parents(zio_t *cio)
 {
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_walk parents 0\r\n");
+	#endif
+
 	zio_link_t *zl = cio->io_walk_link;
 	list_t *pl = &cio->io_parent_list;
 
@@ -416,12 +532,22 @@ zio_walk_parents(zio_t *cio)
 		return (NULL);
 
 	ASSERT(zl->zl_child == cio);
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_walk parents 1\r\n");
+	#endif
+
 	return (zl->zl_parent);
 }
 
 	zio_t *
 zio_walk_children(zio_t *pio)
 {
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_walk children 0\r\n");
+	#endif
+
 	zio_link_t *zl = pio->io_walk_link;
 	list_t *cl = &pio->io_child_list;
 
@@ -432,21 +558,38 @@ zio_walk_children(zio_t *pio)
 		return (NULL);
 
 	ASSERT(zl->zl_parent == pio);
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_walk children 1\r\n");
+	#endif
 	return (zl->zl_child);
 }
 
 	zio_t *
 zio_unique_parent(zio_t *cio)
 {
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_unique parent 0\r\n");
+	#endif
+
 	zio_t *pio = zio_walk_parents(cio);
 
 	VERIFY(zio_walk_parents(cio) == NULL);
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_unique parent 1\r\n");
+	#endif
 	return (pio);
 }
 
 	void
 zio_add_child(zio_t *pio, zio_t *cio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_add_child 0\r\n");
+	#endif
+
 	zio_link_t *zl = kmem_cache_alloc(zio_link_cache, KM_PUSHPAGE);
 	int w;
 
@@ -477,11 +620,18 @@ zio_add_child(zio_t *pio, zio_t *cio)
 
 	mutex_exit(&pio->io_lock);
 	mutex_exit(&cio->io_lock);
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_add_child 1\r\n");
+	#endif
 }
 
 	static void
 zio_remove_child(zio_t *pio, zio_t *cio, zio_link_t *zl)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_remove_child 0\r\n");
+	#endif
 	ASSERT(zl->zl_parent == pio);
 	ASSERT(zl->zl_child == cio);
 
@@ -498,11 +648,17 @@ zio_remove_child(zio_t *pio, zio_t *cio, zio_link_t *zl)
 	mutex_exit(&cio->io_lock);
 
 	kmem_cache_free(zio_link_cache, zl);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_remove_child 1\r\n");
+	#endif
 }
 
 	static boolean_t
 zio_wait_for_children(zio_t *zio, enum zio_child child, enum zio_wait_type wait)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_wait_for_child 0\r\n");
+	#endif
 	uint64_t *countp = &zio->io_children[child][wait];
 	boolean_t waiting = B_FALSE;
 
@@ -515,6 +671,10 @@ zio_wait_for_children(zio_t *zio, enum zio_child child, enum zio_wait_type wait)
 	}
 	mutex_exit(&zio->io_lock);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_wait_for_child 1\r\n");
+	#endif
+
 	return (waiting);
 }
 
@@ -522,6 +682,10 @@ __attribute__((always_inline))
 	static inline void
 zio_notify_parent(zio_t *pio, zio_t *zio, enum zio_wait_type wait)
 {
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_notify_parent 0\r\n");
+	#endif
 	uint64_t *countp = &pio->io_children[zio->io_child_type][wait];
 	int *errorp = &pio->io_child_error[zio->io_child_type];
 
@@ -540,13 +704,23 @@ zio_notify_parent(zio_t *pio, zio_t *zio, enum zio_wait_type wait)
 	} else {
 		mutex_exit(&pio->io_lock);
 	}
+	#if defined(_KERNEL)	
+	printk("##**##:zio_notify_parent 1\r\n");
+	#endif
 }
 
 	static void
 zio_inherit_child_errors(zio_t *zio, enum zio_child c)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_inferit_child_errors 0\r\n");
+	#endif
 	if (zio->io_child_error[c] != 0 && zio->io_error == 0)
 		zio->io_error = zio->io_child_error[c];
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_inferit_child_errors 1\r\n");
+	#endif
 }
 
 /*
@@ -562,6 +736,10 @@ zio_create(zio_t *pio, spa_t *spa, uint64_t txg, const blkptr_t *bp,
 		enum zio_stage stage, enum zio_stage pipeline)
 {
 	zio_t *zio;
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_create 0\r\n");
+	#endif
 
 	ASSERT3U(size, <=, SPA_MAXBLOCKSIZE);
 	ASSERT(P2PHASE(size, SPA_MINBLOCKSIZE) == 0);
@@ -659,14 +837,23 @@ zio_create(zio_t *pio, spa_t *spa, uint64_t txg, const blkptr_t *bp,
 	}
 
 	taskq_init_ent(&zio->io_tqent);
-
+	#if defined(_KERNEL)	
+	printk("##**##:zio_create 1\r\n");
+	#endif  
 	return (zio);
 }
 
 	static void
 zio_destroy(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_destroy 0\r\n");
+	#endif
+
 	kmem_cache_free(zio_cache, zio);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_destroy 1\r\n");
+	#endif
 }
 
 	zio_t *
@@ -674,18 +861,31 @@ zio_null(zio_t *pio, spa_t *spa, vdev_t *vd, zio_done_func_t *done,
 		void *private, enum zio_flag flags)
 {
 	zio_t *zio;
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_null 0\r\n");
+	#endif
 
 	zio = zio_create(pio, spa, 0, NULL, NULL, 0, done, private,
 			ZIO_TYPE_NULL, ZIO_PRIORITY_NOW, flags, vd, 0, NULL,
 			ZIO_STAGE_OPEN, ZIO_INTERLOCK_PIPELINE);
-
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_null 1\r\n");
+	#endif
 	return (zio);
 }
 
 	zio_t *
 zio_root(spa_t *spa, zio_done_func_t *done, void *private, enum zio_flag flags)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_root 0\r\n");
+	#endif
 	return (zio_null(NULL, spa, NULL, done, private, flags));
+	#if defined(_KERNEL)	
+	printk("##**##:zio_root 1\r\n");
+	#endif
 }
 
 	zio_t *
@@ -694,12 +894,19 @@ zio_read(zio_t *pio, spa_t *spa, const blkptr_t *bp,
 		zio_priority_t priority, enum zio_flag flags, const zbookmark_t *zb)
 {
 	zio_t *zio;
+	#if defined(_KERNEL)	
+	printk("##**##:zio_read 0\r\n");
+	#endif
 
 	zio = zio_create(pio, spa, BP_PHYSICAL_BIRTH(bp), bp,
 			data, size, done, private,
 			ZIO_TYPE_READ, priority, flags, NULL, 0, zb,
 			ZIO_STAGE_OPEN, (flags & ZIO_FLAG_DDT_CHILD) ?
 			ZIO_DDT_CHILD_READ_PIPELINE : ZIO_READ_PIPELINE);
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_write 1\r\n");
+	#endif
 
 	return (zio);
 }
@@ -711,7 +918,12 @@ zio_write(zio_t *pio, spa_t *spa, uint64_t txg, blkptr_t *bp,
 		void *private,
 		zio_priority_t priority, enum zio_flag flags, const zbookmark_t *zb)
 {
+
 	zio_t *zio;
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_write 0\r\n");
+	#endif
 
 	ASSERT(zp->zp_checksum >= ZIO_CHECKSUM_OFF &&
 			zp->zp_checksum < ZIO_CHECKSUM_FUNCTIONS &&
@@ -731,6 +943,10 @@ zio_write(zio_t *pio, spa_t *spa, uint64_t txg, blkptr_t *bp,
 	zio->io_physdone = physdone;
 	zio->io_prop = *zp;
 
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_write 1\r\n");
+	#endif
 	return (zio);
 }
 
@@ -740,17 +956,29 @@ zio_rewrite(zio_t *pio, spa_t *spa, uint64_t txg, blkptr_t *bp, void *data,
 		zio_priority_t priority, enum zio_flag flags, zbookmark_t *zb)
 {
 	zio_t *zio;
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_rewrite 0\r\n");
+	#endif
 
 	zio = zio_create(pio, spa, txg, bp, data, size, done, private,
 			ZIO_TYPE_WRITE, priority, flags, NULL, 0, zb,
 			ZIO_STAGE_OPEN, ZIO_REWRITE_PIPELINE);
 
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_rewrite 1\r\n");
+	#endif
 	return (zio);
 }
 
 	void
 zio_write_override(zio_t *zio, blkptr_t *bp, int copies, boolean_t nopwrite)
 {
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_override 0\r\n");
+	#endif
 	ASSERT(zio->io_type == ZIO_TYPE_WRITE);
 	ASSERT(zio->io_child_type == ZIO_CHILD_LOGICAL);
 	ASSERT(zio->io_stage == ZIO_STAGE_OPEN);
@@ -765,11 +993,19 @@ zio_write_override(zio_t *zio, blkptr_t *bp, int copies, boolean_t nopwrite)
 	zio->io_prop.zp_nopwrite = nopwrite;
 	zio->io_prop.zp_copies = copies;
 	zio->io_bp_override = bp;
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_override 1\r\n");
+	#endif
 }
 
 	void
 zio_free(spa_t *spa, uint64_t txg, const blkptr_t *bp)
 {
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_free 0\r\n");
+	#endif
 	metaslab_check_free(spa, bp);
 
 	/*
@@ -785,6 +1021,11 @@ zio_free(spa_t *spa, uint64_t txg, const blkptr_t *bp)
 	} else {
 		VERIFY0(zio_wait(zio_free_sync(NULL, spa, txg, bp, 0)));
 	}
+
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_free 1\r\n");
+	#endif
 }
 
 	zio_t *
@@ -792,6 +1033,10 @@ zio_free_sync(zio_t *pio, spa_t *spa, uint64_t txg, const blkptr_t *bp,
 		enum zio_flag flags)
 {
 	zio_t *zio;
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_free_sync 0\r\n");
+	#endif
 	enum zio_stage stage = ZIO_FREE_PIPELINE;
 
 	dprintf_bp(bp, "freeing in txg %llu, pass %u",
@@ -815,7 +1060,10 @@ zio_free_sync(zio_t *pio, spa_t *spa, uint64_t txg, const blkptr_t *bp,
 	zio = zio_create(pio, spa, txg, bp, NULL, BP_GET_PSIZE(bp),
 			NULL, NULL, ZIO_TYPE_FREE, ZIO_PRIORITY_NOW, flags,
 			NULL, 0, NULL, ZIO_STAGE_OPEN, stage);
-
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_rewrite 0\r\n");
+	#endif
 	return (zio);
 }
 
@@ -824,6 +1072,10 @@ zio_claim(zio_t *pio, spa_t *spa, uint64_t txg, const blkptr_t *bp,
 		zio_done_func_t *done, void *private, enum zio_flag flags)
 {
 	zio_t *zio;
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_claim 0\r\n");
+	#endif
 
 	/*
 	 * A claim is an allocation of a specific block.  Claims are needed
@@ -845,14 +1097,21 @@ zio_claim(zio_t *pio, spa_t *spa, uint64_t txg, const blkptr_t *bp,
 			done, private, ZIO_TYPE_CLAIM, ZIO_PRIORITY_NOW, flags,
 			NULL, 0, NULL, ZIO_STAGE_OPEN, ZIO_CLAIM_PIPELINE);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_claim 1\r\n");
+	#endif
 	return (zio);
 }
 
 	zio_t *
 zio_ioctl(zio_t *pio, spa_t *spa, vdev_t *vd, int cmd,
 		zio_done_func_t *done, void *private, enum zio_flag flags)
+	
 {
 	zio_t *zio;
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ioctl 0\r\n");
+	#endif
 	int c;
 
 	if (vd->vdev_children == 0) {
@@ -869,6 +1128,9 @@ zio_ioctl(zio_t *pio, spa_t *spa, vdev_t *vd, int cmd,
 						done, private, flags));
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ioctl 1\r\n");
+	#endif
 	return (zio);
 }
 
@@ -878,6 +1140,10 @@ zio_read_phys(zio_t *pio, vdev_t *vd, uint64_t offset, uint64_t size,
 		zio_priority_t priority, enum zio_flag flags, boolean_t labels)
 {
 	zio_t *zio;
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_read_phys 0\r\n");
+	#endif
 
 	ASSERT(vd->vdev_children == 0);
 	ASSERT(!labels || offset + size <= VDEV_LABEL_START_SIZE ||
@@ -890,6 +1156,9 @@ zio_read_phys(zio_t *pio, vdev_t *vd, uint64_t offset, uint64_t size,
 
 	zio->io_prop.zp_checksum = checksum;
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_read_phys 1\r\n");
+	#endif
 	return (zio);
 }
 
@@ -899,6 +1168,10 @@ zio_write_phys(zio_t *pio, vdev_t *vd, uint64_t offset, uint64_t size,
 		zio_priority_t priority, enum zio_flag flags, boolean_t labels)
 {
 	zio_t *zio;
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_write_phys 0\r\n");
+	#endif
 
 	ASSERT(vd->vdev_children == 0);
 	ASSERT(!labels || offset + size <= VDEV_LABEL_START_SIZE ||
@@ -923,6 +1196,9 @@ zio_write_phys(zio_t *pio, vdev_t *vd, uint64_t offset, uint64_t size,
 		zio_push_transform(zio, wbuf, size, size, NULL);
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_write_phys 1\r\n");
+	#endif
 	return (zio);
 }
 
@@ -933,9 +1209,14 @@ zio_write_phys(zio_t *pio, vdev_t *vd, uint64_t offset, uint64_t size,
 zio_vdev_child_io(zio_t *pio, blkptr_t *bp, vdev_t *vd, uint64_t offset,
 		void *data, uint64_t size, int type, zio_priority_t priority,
 		enum zio_flag flags, zio_done_func_t *done, void *private)
+
 {
-	enum zio_stage pipeline = ZIO_VDEV_CHILD_PIPELINE;
 	zio_t *zio;
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_child_io 0\r\n");
+	#endif
+	enum zio_stage pipeline = ZIO_VDEV_CHILD_PIPELINE;
 
 	ASSERT(vd->vdev_parent ==
 			(pio->io_vd ? pio->io_vd : pio->io_spa->spa_root_vdev));
@@ -971,6 +1252,9 @@ zio_vdev_child_io(zio_t *pio, blkptr_t *bp, vdev_t *vd, uint64_t offset,
 	if (vd->vdev_ops->vdev_op_leaf && zio->io_logical != NULL)
 		zio->io_logical->io_phys_children++;
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_child_io 1\r\n");
+	#endif
 	return (zio);
 }
 
@@ -980,6 +1264,9 @@ zio_vdev_delegated_io(vdev_t *vd, uint64_t offset, void *data, uint64_t size,
 		zio_done_func_t *done, void *private)
 {
 	zio_t *zio;
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_delegated 0\r\n");
+	#endif
 
 	ASSERT(vd->vdev_ops->vdev_op_leaf);
 
@@ -989,20 +1276,32 @@ zio_vdev_delegated_io(vdev_t *vd, uint64_t offset, void *data, uint64_t size,
 			vd, offset, NULL,
 			ZIO_STAGE_VDEV_IO_START >> 1, ZIO_VDEV_CHILD_PIPELINE);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_delegated 1\r\n");
+	#endif
 	return (zio);
 }
 
 	void
 zio_flush(zio_t *zio, vdev_t *vd)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_flush 0\r\n");
+	#endif
 	zio_nowait(zio_ioctl(zio, zio->io_spa, vd, DKIOCFLUSHWRITECACHE,
 				NULL, NULL,
 				ZIO_FLAG_CANFAIL | ZIO_FLAG_DONT_PROPAGATE | ZIO_FLAG_DONT_RETRY));
+	#if defined(_KERNEL)	
+	printk("##**##:zio_flush 1\r\n");
+	#endif
 }
 
 	void
 zio_shrink(zio_t *zio, uint64_t size)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_shrink 0\r\n");
+	#endif
 	ASSERT(zio->io_executor == NULL);
 	ASSERT(zio->io_orig_size == zio->io_size);
 	ASSERT(size <= zio->io_size);
@@ -1015,6 +1314,9 @@ zio_shrink(zio_t *zio, uint64_t size)
 	ASSERT(BP_GET_COMPRESS(zio->io_bp) == ZIO_COMPRESS_OFF);
 	if (!BP_IS_RAIDZ(zio->io_bp))
 		zio->io_orig_size = zio->io_size = size;
+	#if defined(_KERNEL)	
+	printk("##**##:zio_shrink 1\r\n");
+	#endif
 }
 
 /*
@@ -1026,6 +1328,9 @@ zio_shrink(zio_t *zio, uint64_t size)
 	static int
 zio_read_bp_init(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_read_bp_init 0\r\n");
+	#endif
 	blkptr_t *bp = zio->io_bp;
 
 	if (BP_GET_COMPRESS(bp) != ZIO_COMPRESS_OFF &&
@@ -1045,13 +1350,19 @@ zio_read_bp_init(zio_t *zio)
 
 	if (BP_GET_DEDUP(bp) && zio->io_child_type == ZIO_CHILD_LOGICAL)
 		zio->io_pipeline = ZIO_DDT_READ_PIPELINE;
-
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_read_bp_init 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	static int
 zio_write_bp_init(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_write_bp_init 0\r\n");
+	#endif
 	spa_t *spa = zio->io_spa;
 	zio_prop_t *zp = &zio->io_prop;
 	enum zio_compress compress = zp->zp_compress;
@@ -1187,12 +1498,18 @@ zio_write_bp_init(zio_t *zio)
 		}
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_write_bp_init 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	static int
 zio_free_bp_init(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_free_bp_init 0\r\n");
+	#endif
 	blkptr_t *bp = zio->io_bp;
 
 	if (zio->io_child_type == ZIO_CHILD_LOGICAL) {
@@ -1200,6 +1517,9 @@ zio_free_bp_init(zio_t *zio)
 			zio->io_pipeline = ZIO_DDT_FREE_PIPELINE;
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_free_bp_init 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
@@ -1212,6 +1532,9 @@ zio_free_bp_init(zio_t *zio)
 	static void
 zio_taskq_dispatch(zio_t *zio, zio_taskq_type_t q, boolean_t cutinline)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_taskq-dispatch 0\r\n");
+	#endif
 	spa_t *spa = zio->io_spa;
 	zio_type_t t = zio->io_type;
 	int flags = (cutinline ? TQ_FRONT : 0);
@@ -1248,11 +1571,17 @@ zio_taskq_dispatch(zio_t *zio, zio_taskq_type_t q, boolean_t cutinline)
 	ASSERT(taskq_empty_ent(&zio->io_tqent));
 	spa_taskq_dispatch_ent(spa, t, q, (task_func_t *)zio_execute, zio,
 			flags, &zio->io_tqent);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_taskq-dispatch 1\r\n");
+	#endif
 }
 
 	static boolean_t
 zio_taskq_member(zio_t *zio, zio_taskq_type_t q)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_taskq_member 0\r\n");
+	#endif
 	kthread_t *executor = zio->io_executor;
 	spa_t *spa = zio->io_spa;
 	zio_type_t t;
@@ -1266,21 +1595,36 @@ zio_taskq_member(zio_t *zio, zio_taskq_type_t q)
 		}
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_taskq_member 1\r\n");
+	#endif
 	return (B_FALSE);
 }
 
 	static int
 zio_issue_async(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_issue_async 0\r\n");
+	#endif
 	zio_taskq_dispatch(zio, ZIO_TASKQ_ISSUE, B_FALSE);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_issue_async 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_STOP);
 }
 
 	void
 zio_interrupt(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_interrupt 0\r\n");
+	#endif
 	zio_taskq_dispatch(zio, ZIO_TASKQ_INTERRUPT, B_FALSE);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_interrupt 1\r\n");
+	#endif
 }
 
 /*
@@ -1309,8 +1653,17 @@ static zio_pipe_stage_t *zio_pipeline[];
 	void
 zio_execute(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_execute 0\r\n");
+	#endif
 	__zio_execute(zio);
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_execute 1\r\n");
+	#endif
 }
+
+
 
 __attribute__((always_inline))
 	static inline void
@@ -1390,6 +1743,9 @@ __zio_execute(zio_t *zio)
 	int
 zio_wait(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_wait 0\r\n");
+	#endif
 	int error;
 
 	ASSERT(zio->io_stage == ZIO_STAGE_OPEN);
@@ -1406,13 +1762,19 @@ zio_wait(zio_t *zio)
 
 	error = zio->io_error;
 	zio_destroy(zio);
-
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_wait 1\r\n");
+	#endif
 	return (error);
 }
 
 	void
 zio_nowait(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_nowait 0\r\n");
+	#endif
 	ASSERT(zio->io_executor == NULL);
 
 	if (zio->io_child_type == ZIO_CHILD_LOGICAL &&
@@ -1428,7 +1790,12 @@ zio_nowait(zio_t *zio)
 	}
 
 	__zio_execute(zio);
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_nowait 1\r\n");
+	#endif
 }
+
 
 /*
  * ==========================================================================
@@ -1439,6 +1806,9 @@ zio_nowait(zio_t *zio)
 	static void
 zio_reexecute(zio_t *pio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_reexecute 0\r\n");
+	#endif
 	zio_t *cio, *cio_next;
 	int c, w;
 
@@ -1484,11 +1854,17 @@ zio_reexecute(zio_t *pio)
 	 */
 	if (!(pio->io_flags & ZIO_FLAG_GODFATHER))
 		__zio_execute(pio);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_reexecute 1\r\n");
+	#endif
 }
 
 	void
 zio_suspend(spa_t *spa, zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_suspend 0\r\n");
+	#endif
 	if (spa_get_failmode(spa) == ZIO_FAILURE_MODE_PANIC)
 		fm_panic("Pool '%s' has encountered an uncorrectable I/O "
 				"failure and the failure mode property for this pool "
@@ -1518,11 +1894,17 @@ zio_suspend(spa_t *spa, zio_t *zio)
 	}
 
 	mutex_exit(&spa->spa_suspend_lock);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_suspend 1\r\n");
+	#endif
 }
 
 	int
 zio_resume(spa_t *spa)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_resume 0\r\n");
+	#endif
 	zio_t *pio;
 
 	/*
@@ -1539,16 +1921,25 @@ zio_resume(spa_t *spa)
 		return (0);
 
 	zio_reexecute(pio);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_resume 1\r\n");
+	#endif
 	return (zio_wait(pio));
 }
 
 	void
 zio_resume_wait(spa_t *spa)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_resume_wait 0\r\n");
+	#endif
 	mutex_enter(&spa->spa_suspend_lock);
 	while (spa_suspended(spa))
 		cv_wait(&spa->spa_suspend_cv, &spa->spa_suspend_lock);
 	mutex_exit(&spa->spa_suspend_lock);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_resume_wait 1\r\n");
+	#endif
 }
 
 /*
@@ -1620,17 +2011,26 @@ zio_resume_wait(spa_t *spa)
 	static zio_t *
 zio_read_gang(zio_t *pio, blkptr_t *bp, zio_gang_node_t *gn, void *data)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_read_gang 0\r\n");
+	#endif
 	if (gn != NULL)
 		return (pio);
 
 	return (zio_read(pio, pio->io_spa, bp, data, BP_GET_PSIZE(bp),
 				NULL, NULL, pio->io_priority, ZIO_GANG_CHILD_FLAGS(pio),
 				&pio->io_bookmark));
+	#if defined(_KERNEL)	
+	printk("##**##:zio_read_gang 1\r\n");
+	#endif
 }
 
 	zio_t *
 zio_rewrite_gang(zio_t *pio, blkptr_t *bp, zio_gang_node_t *gn, void *data)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_rewrite_gang 0\r\n");
+	#endif
 	zio_t *zio;
 
 	if (gn != NULL) {
@@ -1662,6 +2062,9 @@ zio_rewrite_gang(zio_t *pio, blkptr_t *bp, zio_gang_node_t *gn, void *data)
 				ZIO_GANG_CHILD_FLAGS(pio), &pio->io_bookmark);
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_rewrite_gang 0\r\n");
+	#endif
 	return (zio);
 }
 
@@ -1669,6 +2072,13 @@ zio_rewrite_gang(zio_t *pio, blkptr_t *bp, zio_gang_node_t *gn, void *data)
 	zio_t *
 zio_free_gang(zio_t *pio, blkptr_t *bp, zio_gang_node_t *gn, void *data)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_free_gang 0\r\n");
+	#endif
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_free_gang 1\r\n");
+	#endif
 	return (zio_free_sync(pio, pio->io_spa, pio->io_txg, bp,
 				ZIO_GANG_CHILD_FLAGS(pio)));
 }
@@ -1677,6 +2087,13 @@ zio_free_gang(zio_t *pio, blkptr_t *bp, zio_gang_node_t *gn, void *data)
 	zio_t *
 zio_claim_gang(zio_t *pio, blkptr_t *bp, zio_gang_node_t *gn, void *data)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_claim_gang 0\r\n");
+	#endif
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_claim_gang 1\r\n");
+	#endif
 	return (zio_claim(pio, pio->io_spa, pio->io_txg, bp,
 				NULL, NULL, ZIO_GANG_CHILD_FLAGS(pio)));
 }
@@ -1695,6 +2112,9 @@ static void zio_gang_tree_assemble_done(zio_t *zio);
 	static zio_gang_node_t *
 zio_gang_node_alloc(zio_gang_node_t **gnpp)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_node_alloc 0\r\n");
+	#endif
 	zio_gang_node_t *gn;
 
 	ASSERT(*gnpp == NULL);
@@ -1703,13 +2123,20 @@ zio_gang_node_alloc(zio_gang_node_t **gnpp)
 	gn->gn_gbh = zio_buf_alloc(SPA_GANGBLOCKSIZE);
 	*gnpp = gn;
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_node_alloc 1\r\n");
+	#endif
 	return (gn);
 }
 
 	static void
 zio_gang_node_free(zio_gang_node_t **gnpp)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_node_free 0\r\n");
+	#endif
 	zio_gang_node_t *gn = *gnpp;
+	
 	int g;
 
 	for (g = 0; g < SPA_GBH_NBLKPTRS; g++)
@@ -1718,11 +2145,18 @@ zio_gang_node_free(zio_gang_node_t **gnpp)
 	zio_buf_free(gn->gn_gbh, SPA_GANGBLOCKSIZE);
 	kmem_free(gn, sizeof (*gn));
 	*gnpp = NULL;
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_node_free 1\r\n");
+	#endif
 }
 
 	static void
 zio_gang_tree_free(zio_gang_node_t **gnpp)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_tree_free 0\r\n");
+	#endif
 	zio_gang_node_t *gn = *gnpp;
 	int g;
 
@@ -1733,11 +2167,17 @@ zio_gang_tree_free(zio_gang_node_t **gnpp)
 		zio_gang_tree_free(&gn->gn_child[g]);
 
 	zio_gang_node_free(gnpp);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_tree_free 1\r\n");
+	#endif
 }
 
 	static void
 zio_gang_tree_assemble(zio_t *gio, blkptr_t *bp, zio_gang_node_t **gnpp)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_tree_assemble 0\r\n");
+	#endif
 	zio_gang_node_t *gn = zio_gang_node_alloc(gnpp);
 
 	ASSERT(gio->io_gang_leader == gio);
@@ -1746,11 +2186,17 @@ zio_gang_tree_assemble(zio_t *gio, blkptr_t *bp, zio_gang_node_t **gnpp)
 	zio_nowait(zio_read(gio, gio->io_spa, bp, gn->gn_gbh,
 				SPA_GANGBLOCKSIZE, zio_gang_tree_assemble_done, gn,
 				gio->io_priority, ZIO_GANG_CHILD_FLAGS(gio), &gio->io_bookmark));
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_tree_assemble 1\r\n");
+	#endif
 }
 
 	static void
 zio_gang_tree_assemble_done(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_tree_assemble_done 0\r\n");
+	#endif
 	zio_t *gio = zio->io_gang_leader;
 	zio_gang_node_t *gn = zio->io_private;
 	blkptr_t *bp = zio->io_bp;
@@ -1775,11 +2221,17 @@ zio_gang_tree_assemble_done(zio_t *zio)
 			continue;
 		zio_gang_tree_assemble(gio, gbp, &gn->gn_child[g]);
 	}
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_tree_assemble_done 1\r\n");
+	#endif
 }
 
 	static void
 zio_gang_tree_issue(zio_t *pio, zio_gang_node_t *gn, blkptr_t *bp, void *data)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_tree_issue 0\r\n");
+	#endif
 	zio_t *gio = pio->io_gang_leader;
 	zio_t *zio;
 	int g;
@@ -1811,11 +2263,17 @@ zio_gang_tree_issue(zio_t *pio, zio_gang_node_t *gn, blkptr_t *bp, void *data)
 
 	if (zio != pio)
 		zio_nowait(zio);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_tree_issue 1\r\n");
+	#endif
 }
 
 	static int
 zio_gang_assemble(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_assemble 0\r\n");
+	#endif
 	blkptr_t *bp = zio->io_bp;
 
 	ASSERT(BP_IS_GANG(bp) && zio->io_gang_leader == NULL);
@@ -1825,12 +2283,18 @@ zio_gang_assemble(zio_t *zio)
 
 	zio_gang_tree_assemble(zio, bp, &zio->io_gang_tree);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_assemble 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	static int
 zio_gang_issue(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_issue 0\r\n");
+	#endif
 	blkptr_t *bp = zio->io_bp;
 
 	if (zio_wait_for_children(zio, ZIO_CHILD_GANG, ZIO_WAIT_DONE))
@@ -1846,12 +2310,18 @@ zio_gang_issue(zio_t *zio)
 
 	zio->io_pipeline = ZIO_INTERLOCK_PIPELINE;
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_issue 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	static void
 zio_write_gang_member_ready(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_member_ready 0\r\n");
+	#endif
 	zio_t *pio = zio_unique_parent(zio);
 	dva_t *cdva = zio->io_bp->blk_dva;
 	dva_t *pdva = pio->io_bp->blk_dva;
@@ -1878,11 +2348,17 @@ zio_write_gang_member_ready(zio_t *zio)
 		DVA_SET_ASIZE(&pdva[d], asize);
 	}
 	mutex_exit(&pio->io_lock);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_gang_member_ready 1\r\n");
+	#endif
 }
 
 	static int
 zio_write_gang_block(zio_t *pio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_write_gang_block 0\r\n");
+	#endif
 	spa_t *spa = pio->io_spa;
 	blkptr_t *bp = pio->io_bp;
 	zio_t *gio = pio->io_gang_leader;
@@ -1958,6 +2434,9 @@ zio_write_gang_block(zio_t *pio)
 
 	zio_nowait(zio);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_write_gang_block 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
@@ -1972,6 +2451,9 @@ zio_write_gang_block(zio_t *pio)
 	static int
 zio_nop_write(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_nop_write 0\r\n");
+	#endif
 	blkptr_t *bp = zio->io_bp;
 	blkptr_t *bp_orig = &zio->io_bp_orig;
 	zio_prop_t *zp = &zio->io_prop;
@@ -2013,7 +2495,10 @@ zio_nop_write(zio_t *zio)
 		zio->io_pipeline = ZIO_INTERLOCK_PIPELINE;
 		zio->io_flags |= ZIO_FLAG_NOPWRITE;
 	}
-
+	
+	#if defined(_KERNEL)	
+	printk("##**##:zio_nop_write 0\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
@@ -2025,6 +2510,9 @@ zio_nop_write(zio_t *zio)
 	static void
 zio_ddt_child_read_done(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_child_read_done 0\r\n");
+	#endif
 	blkptr_t *bp = zio->io_bp;
 	ddt_entry_t *dde = zio->io_private;
 	ddt_phys_t *ddp;
@@ -2039,11 +2527,17 @@ zio_ddt_child_read_done(zio_t *zio)
 	else
 		zio_buf_free(zio->io_data, zio->io_size);
 	mutex_exit(&pio->io_lock);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_child_read_done 1\r\n");
+	#endif
 }
 
 	static int
 zio_ddt_read_start(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_read_start 0\r\n");
+	#endif
 	blkptr_t *bp = zio->io_bp;
 	int p;
 
@@ -2082,12 +2576,18 @@ zio_ddt_read_start(zio_t *zio)
 				zio->io_data, zio->io_size, NULL, NULL, zio->io_priority,
 				ZIO_DDT_CHILD_FLAGS(zio), &zio->io_bookmark));
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_read_start 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	static int
 zio_ddt_read_done(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_read_done 0\r\n");
+	#endif
 	blkptr_t *bp = zio->io_bp;
 
 	if (zio_wait_for_children(zio, ZIO_CHILD_DDT, ZIO_WAIT_DONE))
@@ -2119,12 +2619,18 @@ zio_ddt_read_done(zio_t *zio)
 
 	ASSERT(zio->io_vsd == NULL);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_read_done 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	static boolean_t
 zio_ddt_collision(zio_t *zio, ddt_t *ddt, ddt_entry_t *dde)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_collision 0\r\n");
+	#endif
 	spa_t *spa = zio->io_spa;
 	int p;
 
@@ -2175,12 +2681,18 @@ zio_ddt_collision(zio_t *zio, ddt_t *ddt, ddt_entry_t *dde)
 		}
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_collision 1\r\n");
+	#endif
 	return (B_FALSE);
 }
 
 	static void
 zio_ddt_child_write_ready(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_child_write_ready 0\r\n");
+	#endif
 	int p = zio->io_prop.zp_copies;
 	ddt_t *ddt = ddt_select(zio->io_spa, zio->io_bp);
 	ddt_entry_t *dde = zio->io_private;
@@ -2200,11 +2712,17 @@ zio_ddt_child_write_ready(zio_t *zio)
 		ddt_bp_fill(ddp, pio->io_bp, zio->io_txg);
 
 	ddt_exit(ddt);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_collision 1\r\n");
+	#endif
 }
 
 	static void
 zio_ddt_child_write_done(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_child_write_done 0\r\n");
+	#endif
 	int p = zio->io_prop.zp_copies;
 	ddt_t *ddt = ddt_select(zio->io_spa, zio->io_bp);
 	ddt_entry_t *dde = zio->io_private;
@@ -2224,11 +2742,17 @@ zio_ddt_child_write_done(zio_t *zio)
 	}
 
 	ddt_exit(ddt);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_child_write_done 1\r\n");
+	#endif
 }
 
 	static void
 zio_ddt_ditto_write_done(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_ditto_write_done 0\r\n");
+	#endif
 	int p = DDT_PHYS_DITTO;
 	blkptr_t *bp = zio->io_bp;
 	ddt_t *ddt = ddt_select(zio->io_spa, bp);
@@ -2253,11 +2777,17 @@ zio_ddt_ditto_write_done(zio_t *zio)
 	}
 
 	ddt_exit(ddt);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_ditto_write_done 1\r\n");
+	#endif
 }
 
 	static int
 zio_ddt_write(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_write 0\r\n");
+	#endif
 	spa_t *spa = zio->io_spa;
 	blkptr_t *bp = zio->io_bp;
 	uint64_t txg = zio->io_txg;
@@ -2362,6 +2892,9 @@ zio_ddt_write(zio_t *zio)
 	if (dio)
 		zio_nowait(dio);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_write 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
@@ -2370,6 +2903,9 @@ ddt_entry_t *freedde; /* for debugging */
 	static int
 zio_ddt_free(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_free 0\r\n");
+	#endif
 	spa_t *spa = zio->io_spa;
 	blkptr_t *bp = zio->io_bp;
 	ddt_t *ddt = ddt_select(spa, bp);
@@ -2388,6 +2924,9 @@ zio_ddt_free(zio_t *zio)
 	}
 	ddt_exit(ddt);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ddt_free 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
@@ -2399,6 +2938,9 @@ zio_ddt_free(zio_t *zio)
 	static int
 zio_dva_allocate(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_dva_allocate 0\r\n");
+	#endif
 	spa_t *spa = zio->io_spa;
 	metaslab_class_t *mc = spa_normal_class(spa);
 	blkptr_t *bp = zio->io_bp;
@@ -2437,26 +2979,41 @@ zio_dva_allocate(zio_t *zio)
 		zio->io_error = error;
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_dva_allocate 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	static int
 zio_dva_free(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_dva_free 0\r\n");
+	#endif
 	metaslab_free(zio->io_spa, zio->io_bp, zio->io_txg, B_FALSE);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_dva_free 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	static int
 zio_dva_claim(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_dva_claim 0\r\n");
+	#endif
 	int error;
 
 	error = metaslab_claim(zio->io_spa, zio->io_bp, zio->io_txg);
 	if (error)
 		zio->io_error = error;
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_dva_claim 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
@@ -2468,6 +3025,9 @@ zio_dva_claim(zio_t *zio)
 	static void
 zio_dva_unallocate(zio_t *zio, zio_gang_node_t *gn, blkptr_t *bp)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_dva_unallocate 0\r\n");
+	#endif
 	int g;
 
 	ASSERT(bp->blk_birth == zio->io_txg || BP_IS_HOLE(bp));
@@ -2482,6 +3042,9 @@ zio_dva_unallocate(zio_t *zio, zio_gang_node_t *gn, blkptr_t *bp)
 					&gn->gn_gbh->zg_blkptr[g]);
 		}
 	}
+	#if defined(_KERNEL)	
+	printk("##**##:zio_dva_unallocate 1\r\n");
+	#endif
 }
 
 /*
@@ -2491,6 +3054,9 @@ zio_dva_unallocate(zio_t *zio, zio_gang_node_t *gn, blkptr_t *bp)
 zio_alloc_zil(spa_t *spa, uint64_t txg, blkptr_t *new_bp, uint64_t size,
 		boolean_t use_slog)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_alloc_zil 0\r\n");
+	#endif
 	int error = 1;
 
 	ASSERT(txg > spa_syncing_txg(spa));
@@ -2525,6 +3091,9 @@ zio_alloc_zil(spa_t *spa, uint64_t txg, blkptr_t *new_bp, uint64_t size,
 		BP_SET_BYTEORDER(new_bp, ZFS_HOST_BYTEORDER);
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_alloc_zil 1\r\n");
+	#endif
 	return (error);
 }
 
@@ -2534,10 +3103,16 @@ zio_alloc_zil(spa_t *spa, uint64_t txg, blkptr_t *new_bp, uint64_t size,
 	void
 zio_free_zil(spa_t *spa, uint64_t txg, blkptr_t *bp)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_free_zil 0\r\n");
+	#endif
 	ASSERT(BP_GET_TYPE(bp) == DMU_OT_INTENT_LOG);
 	ASSERT(!BP_IS_GANG(bp));
 
 	zio_free(spa, txg, bp);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_alloc_zil 1\r\n");
+	#endif
 }
 
 /*
@@ -2548,6 +3123,9 @@ zio_free_zil(spa_t *spa, uint64_t txg, blkptr_t *bp)
 	static int
 zio_vdev_io_start(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_start 0\r\n");
+	#endif
 	vdev_t *vd = zio->io_vd;
 	uint64_t align;
 	spa_t *spa = zio->io_spa;
@@ -2640,12 +3218,18 @@ zio_vdev_io_start(zio_t *zio)
 		}
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_start 1\r\n");
+	#endif
 	return (vd->vdev_ops->vdev_op_io_start(zio));
 }
 
 	static int
 zio_vdev_io_done(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_done 0\r\n");
+	#endif
 	vdev_t *vd = zio->io_vd;
 	vdev_ops_t *ops = vd ? vd->vdev_ops : &vdev_mirror_ops;
 	boolean_t unexpected_error = B_FALSE;
@@ -2683,6 +3267,9 @@ zio_vdev_io_done(zio_t *zio)
 	if (unexpected_error)
 		VERIFY(vdev_probe(vd, zio) == NULL);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_done 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
@@ -2694,14 +3281,23 @@ zio_vdev_io_done(zio_t *zio)
 zio_vsd_default_cksum_finish(zio_cksum_report_t *zcr,
 		const void *good_buf)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vsd_default_cksum_finish 0\r\n");
+	#endif
 	/* no processing needed */
 	zfs_ereport_finish_checksum(zcr, good_buf, zcr->zcr_cbdata, B_FALSE);
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vsd_default_cksum_finish 1\r\n");
+	#endif
 }
 
 /*ARGSUSED*/
 	void
 zio_vsd_default_cksum_report(zio_t *zio, zio_cksum_report_t *zcr, void *ignored)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vsd_default_cksum_report 0\r\n");
+	#endif
 	void *buf = zio_buf_alloc(zio->io_size);
 
 	bcopy(zio->io_data, buf, zio->io_size);
@@ -2710,11 +3306,18 @@ zio_vsd_default_cksum_report(zio_t *zio, zio_cksum_report_t *zcr, void *ignored)
 	zcr->zcr_cbdata = buf;
 	zcr->zcr_finish = zio_vsd_default_cksum_finish;
 	zcr->zcr_free = zio_buf_free;
+
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vsd_default_cksum_report 1\r\n");
+	#endif
 }
 
 	static int
 zio_vdev_io_assess(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_assess 0\r\n");
+	#endif
 	vdev_t *vd = zio->io_vd;
 
 	if (zio_wait_for_children(zio, ZIO_CHILD_VDEV, ZIO_WAIT_DONE))
@@ -2777,34 +3380,55 @@ zio_vdev_io_assess(zio_t *zio)
 		zio->io_physdone(zio->io_logical);
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_assess 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	void
 zio_vdev_io_reissue(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_reissue 0\r\n");
+	#endif
 	ASSERT(zio->io_stage == ZIO_STAGE_VDEV_IO_START);
 	ASSERT(zio->io_error == 0);
 
 	zio->io_stage >>= 1;
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_reissue 1\r\n");
+	#endif
 }
 
 	void
 zio_vdev_io_redone(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_redone 0\r\n");
+	#endif
 	ASSERT(zio->io_stage == ZIO_STAGE_VDEV_IO_DONE);
 
 	zio->io_stage >>= 1;
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_redone 1\r\n");
+	#endif
 }
 
 	void
 zio_vdev_io_bypass(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_bypass 0\r\n");
+	#endif
 	ASSERT(zio->io_stage == ZIO_STAGE_VDEV_IO_START);
 	ASSERT(zio->io_error == 0);
 
 	zio->io_flags |= ZIO_FLAG_IO_BYPASS;
 	zio->io_stage = ZIO_STAGE_VDEV_IO_ASSESS >> 1;
+	#if defined(_KERNEL)	
+	printk("##**##:zio_vdev_io_bypass 1\r\n");
+	#endif
 }
 
 /*
@@ -2815,6 +3439,9 @@ zio_vdev_io_bypass(zio_t *zio)
 	static int
 zio_checksum_generate(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_checksum_generate 0\r\n");
+	#endif
 	blkptr_t *bp = zio->io_bp;
 	enum zio_checksum checksum;
 
@@ -2840,12 +3467,18 @@ zio_checksum_generate(zio_t *zio)
 
 	zio_checksum_compute(zio, checksum, zio->io_data, zio->io_size);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_checksum_generate 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	static int
 zio_checksum_verify(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_checksum_verify 0\r\n");
+	#endif
 	zio_bad_cksum_t info;
 	blkptr_t *bp = zio->io_bp;
 	int error;
@@ -2872,6 +3505,9 @@ zio_checksum_verify(zio_t *zio)
 		}
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_checksum_verify 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
@@ -2881,6 +3517,12 @@ zio_checksum_verify(zio_t *zio)
 	void
 zio_checksum_verified(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_checksum_verified 0\r\n");
+	#endif
+	#if defined(_KERNEL)	
+	printk("##**##:zio_checksum_verified 1\r\n");
+	#endif
 	zio->io_pipeline &= ~ZIO_STAGE_CHECKSUM_VERIFY;
 }
 
@@ -2896,6 +3538,9 @@ zio_checksum_verified(zio_t *zio)
 	int
 zio_worst_error(int e1, int e2)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_worst_error 0\r\n");
+	#endif
 	static int zio_error_rank[] = { 0, ENXIO, ECKSUM, EIO };
 	int r1, r2;
 
@@ -2907,6 +3552,9 @@ zio_worst_error(int e1, int e2)
 		if (e2 == zio_error_rank[r2])
 			break;
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_worst_error 1\r\n");
+	#endif
 	return (r1 > r2 ? e1 : e2);
 }
 
@@ -2918,6 +3566,9 @@ zio_worst_error(int e1, int e2)
 	static int
 zio_ready(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ready 0\r\n");
+	#endif
 	blkptr_t *bp = zio->io_bp;
 	zio_t *pio, *pio_next;
 
@@ -2970,12 +3621,18 @@ zio_ready(zio_t *zio)
 			zio->io_spa->spa_syncing_txg == zio->io_txg)
 		zio_handle_ignored_writes(zio);
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_ready 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_CONTINUE);
 }
 
 	static int
 zio_done(zio_t *zio)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zio_done 0\r\n");
+	#endif
 	zio_t *pio, *pio_next;
 	int c, w;
 
@@ -3262,6 +3919,9 @@ zio_done(zio_t *zio)
 		zio_destroy(zio);
 	}
 
+	#if defined(_KERNEL)	
+	printk("##**##:zio_done 1\r\n");
+	#endif
 	return (ZIO_PIPELINE_STOP);
 }
 
@@ -3300,6 +3960,9 @@ static zio_pipe_stage_t *zio_pipeline[] = {
 zbookmark_is_before(const dnode_phys_t *dnp, const zbookmark_t *zb1,
 		const zbookmark_t *zb2)
 {
+	#if defined(_KERNEL)	
+	printk("##**##:zbookmark_is_before 0\r\n");
+	#endif
 	uint64_t zb1nextL0, zb2thisobj;
 
 	ASSERT(zb1->zb_objset == zb2->zb_objset);
@@ -3334,6 +3997,9 @@ zbookmark_is_before(const dnode_phys_t *dnp, const zbookmark_t *zb1,
 		return (B_FALSE);
 	if (zb2->zb_object == DMU_META_DNODE_OBJECT)
 		return (B_FALSE);
+	#if defined(_KERNEL)	
+	printk("##**##:zbookmark_is_before 1\r\n");
+	#endif
 	return (zb1nextL0 <= zb2->zb_blkid);
 }
 
